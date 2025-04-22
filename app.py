@@ -1,39 +1,48 @@
 import streamlit as st
-from tensorflow.keras.models import model_from_json
-from PIL import Image, UnidentifiedImageError
-import numpy as np
-import os
 
-st.set_page_config(page_title="Classificador Gats vs Gossos", layout="centered")
-st.title("🐶 Classificador de Gossos i Gats 🐱")
-st.markdown("Puja una imatge i la IA et dirà si veu un gos o un gat! 🧠")
+try:
+    from tensorflow.keras.models import model_from_json
+    import numpy as np
+    from PIL import Image, UnidentifiedImageError
+    import os
 
-uploaded_file = st.file_uploader("📤 Pujar imatge (jpg, png)", type=["jpg", "jpeg", "png"])
+    st.set_page_config(page_title="Classificador Gats vs Gossos", layout="centered")
+    st.title("🐶 Classificador de Gossos i Gats 🐱")
+    st.markdown("Puja una imatge i la IA et dirà si veu un gos o un gat! 🧠")
 
-if not os.path.exists("model_gats_gossos.json") or not os.path.exists("model_gats_gossos.weights.h5"):
-    st.error("❌ El model no s'ha trobat. Assegura't que els fitxers JSON i WEIGHTS estiguin pujats correctament al teu repositori.")
-else:
-    with open("model_gats_gossos.json", "r") as json_file:
-        model_json = json_file.read()
+    uploaded_file = st.file_uploader("📤 Pujar imatge (jpg, png)", type=["jpg", "jpeg", "png"])
 
-    model = model_from_json(model_json)
-    model.load_weights("model_gats_gossos.weights.h5")
+    model_path = "model_gats_gossos.json"
+    weights_path = "model_gats_gossos.weights.h5"
 
-    if uploaded_file:
-        try:
-            image = Image.open(uploaded_file).convert("RGB").resize((100, 100))
-            st.image(image, caption='📷 Imatge pujada', use_container_width=True)
+    if not os.path.exists(model_path) or not os.path.exists(weights_path):
+        st.error("❌ El model no s'ha trobat. Assegura't que els fitxers JSON i WEIGHTS estiguin pujats correctament al teu repositori.")
+    else:
+        with open(model_path, "r") as json_file:
+            model_json = json_file.read()
 
-            img_array = np.array(image) / 255.0
-            img_array = np.expand_dims(img_array, axis=0)
+        model = model_from_json(model_json)
+        model.load_weights(weights_path)
 
-            prediction = model.predict(img_array)
-            prob = float(prediction[0])
+        if uploaded_file:
+            try:
+                image = Image.open(uploaded_file).convert("RGB").resize((100, 100))
+                st.image(image, caption='📷 Imatge pujada', use_container_width=True)
 
-            if prob > 0.5:
-                st.success(f"És un **gos** 🐶 amb {prob*100:.2f}% de confiança!")
-            else:
-                st.success(f"És un **gat** 🐱 amb {(1 - prob)*100:.2f}% de confiança!")
+                img_array = np.array(image) / 255.0
+                img_array = np.expand_dims(img_array, axis=0)
 
-        except UnidentifiedImageError:
-            st.error("❌ No s'ha pogut llegir la imatge. Si us plau, puja un arxiu .jpg o .png vàlid.")
+                prediction = model.predict(img_array)
+                prob = float(prediction[0])
+
+                if prob > 0.5:
+                    st.success(f"És un **gos** 🐶 amb una confiança del {prob*100:.2f}%")
+                else:
+                    st.success(f"És un **gat** 🐱 amb una confiança del {(1 - prob)*100:.2f}%")
+
+            except UnidentifiedImageError:
+                st.error("❌ No s'ha pogut llegir la imatge. Si us plau, puja un arxiu .jpg o .png vàlid.")
+
+except ModuleNotFoundError as e:
+    st.error("❌ Falten llibreries. Assegura't que `tensorflow`, `PIL` i `numpy` estiguin instal·lades.")
+    st.code(f"{e}", language="python")
